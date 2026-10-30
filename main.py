@@ -52,7 +52,7 @@ FG = (1, 1, 1, 1)
 
 APP_DIR = os.path.dirname(os.path.abspath(__file__))
 COOKIES_FILE = os.path.join(APP_DIR, "youtube_cookies.txt")
-MAX_TRACKS = 30
+MAX_TRACKS = 500
 
 
 # --------------------------------------------------------------------------
