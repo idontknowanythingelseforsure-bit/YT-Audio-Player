@@ -781,9 +781,11 @@ class YTPlayerApp(App):
                 for entry in entries:
                     if not entry:
                         continue
-                    video_url = entry.get("url") or (
-                        "https://www.youtube.com/watch?v=%s" % entry.get("id")
-                    )
+                    video_url = entry.get("url") or ""
+                    if not video_url.startswith("http"):
+                        video_url = "https://www.youtube.com/watch?v=%s" % (
+                            entry.get("id") or video_url
+                        )
                     tracks.append(
                         {
                             "url": video_url,
