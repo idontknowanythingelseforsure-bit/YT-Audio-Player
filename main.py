@@ -52,7 +52,7 @@ FG = (1, 1, 1, 1)
 
 APP_DIR = os.path.dirname(os.path.abspath(__file__))
 COOKIES_FILE = os.path.join(APP_DIR, "youtube_cookies.txt")
-MAX_TRACKS = 500
+MAX_TRACKS = 1000
 
 
 # --------------------------------------------------------------------------
@@ -360,6 +360,32 @@ class RootWidget(BoxLayout):
             )
         )
 
+        # ---- queue size (matches the desktop "Queue No." field) ----
+        queue_row = BoxLayout(size_hint_y=None, height=dp(36), spacing=dp(6))
+        queue_row.add_widget(
+            self._label(
+                "Queue No.",
+                color=ACCENT,
+                bold=True,
+                size=11,
+                size_hint_x=None,
+                width=dp(74),
+            )
+        )
+        self.queue_input = TextInput(
+            text=str(MAX_TRACKS),
+            multiline=False,
+            input_filter="int",
+            font_size=sp(12),
+            halign="center",
+            background_color=PANEL,
+            foreground_color=FG,
+            cursor_color=FG,
+            padding=[dp(6), dp(9)],
+        )
+        queue_row.add_widget(self.queue_input)
+        body.add_widget(queue_row)
+
         # ---- control buttons ----
         controls = BoxLayout(size_hint_y=None, height=dp(42), spacing=dp(5))
         self.play_btn = self._button(
@@ -412,6 +438,8 @@ class RootWidget(BoxLayout):
         # ---- playlist ----
         body.add_widget(self._label("Playlist Queue:", size=11, height=dp(22)))
         scroll = ScrollView(size_hint=(1, 1))
+        self.playlist_scroll = scroll
+        self.playlist_buttons = []
         self.playlist_layout = BoxLayout(
             orientation="vertical", size_hint_y=None, spacing=dp(2)
         )
@@ -436,6 +464,7 @@ class RootWidget(BoxLayout):
     # ---- playlist ----
     def set_playlist(self, tracks):
         self.playlist_layout.clear_widgets()
+        self.playlist_buttons = []
         for index, track in enumerate(tracks):
             button = Button(
                 text="%d. %s" % (index + 1, track["title"]),
@@ -455,7 +484,20 @@ class RootWidget(BoxLayout):
             button.bind(
                 on_release=lambda _b, i=index: self.app.play_index(i)
             )
+            self.playlist_buttons.append(button)
             self.playlist_layout.add_widget(button)
+
+    def highlight(self, index):
+        """Accent the playing row and scroll it into view (desktop parity)."""
+        for i, button in enumerate(self.playlist_buttons):
+            button.background_color = ACCENT if i == index else PANEL
+        if 0 <= index < len(self.playlist_buttons):
+            try:
+                self.playlist_scroll.scroll_to(
+                    self.playlist_buttons[index], padding=dp(8), animate=True
+                )
+            except Exception:
+                pass
 
 
 # --------------------------------------------------------------------------
@@ -478,6 +520,7 @@ class YTPlayerApp(App):
         self._finished_guard = False
         self._notification_permission_requested = False
         self._last_service_sync = 0.0
+        self.max_playlist_items = MAX_TRACKS
         self.player = make_player(self._on_track_finished)
 
         self.root_widget = RootWidget(app=self)
@@ -693,6 +736,19 @@ class YTPlayerApp(App):
         if not url:
             self._status("Please paste a YouTube link first.")
             return
+
+        # Clean URL to remove tracking params that break yt-dlp.
+        if "?si=" in url:
+            url = url.split("?si=")[0]
+
+        # Per-load queue size, matching the desktop "Queue No." field.
+        try:
+            value = int(self.root_widget.queue_input.text.strip())
+            if value > 0:
+                self.max_playlist_items = value
+        except (TypeError, ValueError):
+            pass
+
         self._ui_loading()
         self._start_background_service()
         self._status("Fetching playlist...")
@@ -706,13 +762,18 @@ class YTPlayerApp(App):
         options = self._ydl_opts(
             noplaylist=False,
             extract_flat="in_playlist",
-            playlistend=MAX_TRACKS,
+            playlistend=self.max_playlist_items,
         )
         try:
             with yt_dlp.YoutubeDL(options) as ydl:
                 info = ydl.extract_info(url, download=False)
 
             tracks = []
+            if info is None:
+                self._status("Error: No info returned from yt-dlp.")
+                self._ui_idle()
+                return
+
             entries = info.get("entries")
             if entries:
                 for entry in entries:
@@ -761,6 +822,9 @@ class YTPlayerApp(App):
             self.stop_play()
             return
         track = self.playlist[self.current_index]
+        Clock.schedule_once(
+            lambda dt: self.root_widget.highlight(self.current_index), 0
+        )
         Clock.schedule_once(lambda dt: self._ui_loading(), 0)
         self._start_background_service()
         self._title("Loading: %s..." % track["title"])
