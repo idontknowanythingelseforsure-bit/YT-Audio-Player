@@ -773,7 +773,7 @@ class YTPlayerApp(App):
             tracks = []
             if info is None:
                 self._status("Error: No info returned from yt-dlp.")
-                self._ui_idle()
+                self._ui_error()
                 return
 
             entries = info.get("entries")
@@ -802,7 +802,7 @@ class YTPlayerApp(App):
 
             if not tracks:
                 self._status("No playable videos found.")
-                self._ui_idle()
+                self._ui_error()
                 return
 
             self.playlist = tracks
@@ -814,7 +814,7 @@ class YTPlayerApp(App):
             Clock.schedule_once(lambda dt: self.play_current_track())
         except Exception as exc:
             self._status("Error: %s" % exc)
-            self._ui_idle()
+            self._ui_error()
 
     # ---- playback ----
     def play_index(self, index):
@@ -960,12 +960,25 @@ class YTPlayerApp(App):
 
     def _ui_playing(self, paused):
         r = self.root_widget
-        r.play_btn.disabled = True
+        # Desktop keeps "Play" enabled while a track plays so a new link/queue
+        # can be fetched without pressing Stop first.
+        r.play_btn.disabled = False
         r.pause_btn.disabled = False
         r.stop_btn.disabled = False
         r.prev_btn.disabled = False
         r.next_btn.disabled = False
         r.pause_btn.text = "> Resume" if paused else "II Pause"
+
+    def _ui_error(self):
+        """Restore controls after a failed fetch (keep playing if audio is live)."""
+
+        def apply(dt):
+            if self.is_playing:
+                self._ui_playing(self._paused)
+            else:
+                self._ui_idle()
+
+        Clock.schedule_once(apply, 0)
 
     # ---- clock ----
     def _tick(self, dt):
