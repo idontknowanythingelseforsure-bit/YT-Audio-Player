@@ -8,7 +8,7 @@ Repo: I:\Projects\REA\YT Audio Player (Windows, PowerShell). Git repo, remote `i
 - `java/org/ytaudioplayer/MediaWidgetProvider.java` — home-screen widget provider.
 - `android_res/` — widget layout, `xml/media_widget_info.xml`, drawables. Wired via `android.add_resources`.
 - `p4a_hooks.py` — p4a `after_apk_build` hook: injects `--native-service` and patches the generated manifest with the widget receiver.
-- `dist/` — built APKs. v0.2.0/v0.4.0 are direct-playback builds without the widget. v0.3.0 was broken (service owned playback). v0.7.0 is the current build: direct playback + lock-screen MediaSession + home widget (commit `f4d5c0e`).
+- `dist/` — built APKs. v0.2.0/v0.4.0 are direct-playback builds without the widget. v0.3.0 was broken (service owned playback). v0.8.0 is the current build (direct playback + lock-screen MediaSession + home widget + desktop feature parity: `Queue No.` field, 1000-track cap, `?si=` stripping, playing-row highlight).
 - `playlists_data.json` — audio playlist data.
 - Desktop/Windows extras at repo root: `YT_Audio_Player.exe`, `youtube_audio_player.pyw`, `export_cookies.py`, `youtube_cookies.txt`, icons.
 
