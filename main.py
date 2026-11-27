@@ -373,8 +373,10 @@ class RootWidget(BoxLayout):
             )
         )
         self.queue_input = TextInput(
-            text=str(MAX_TRACKS),
+            # Desktop app defaults this field to 50 (max_playlist_items caps at 1000).
+            text="50",
             multiline=False,
+            input_type="number",
             input_filter="int",
             font_size=sp(12),
             halign="center",
